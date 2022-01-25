@@ -1,20 +1,32 @@
-version: '3'
+version: '3.1'
 
 services:
-  reverse-proxy:
-    image: traefik:v2.4
-    container_name: traefik
-    ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./traefik.toml:/etc/traefik/traefik.toml
-      - ./acme.json:/acme.json
+  reverseproxy:
+    image: traefik:v2.5.3
+    container_name: reverse_proxy
+    command: --logLevel=DEBUG
     restart: always
     networks:
       - web
+    volumes:
+      - ./conf/:/etc/traefik
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./acme.json:/acme.json
+    ports:
+      - 80:80
+      - 443:443
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.TRAEFIK.loadbalancer.server.port=8080
+      - traefik.http.routers.TRAEFIK.rule=Host(`traefik.pierregourgouillon.com`)
+      - traefik.http.routers.TRAEFIK.entrypoints=http
+      - traefik.http.routers.TRAEFIK.middlewares=https-redirect@file
+      - traefik.http.routers.TRAEFIK-Https.rule=Host(`traefik.pierregourgouillon.com`)
+      - traefik.http.routers.TRAEFIK-Https.entrypoints=https
+      - traefik.http.routers.TRAEFIK-Https.middlewares=security@file, compression@file, auth-traefik@file
+      - traefik.http.routers.TRAEFIK-Https.tls=true
+      - traefik.http.routers.TRAEFIK-Https.tls.certresolver=letsencrypt
+
 networks:
   web:
     external: true
